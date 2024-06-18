@@ -111,7 +111,7 @@ class FeatureExtractorMatcher(object):
         # ratio test
         good_matches = []
         for m, n in matches:
-            if m.distance < 0.45 * n.distance:
+            if m.distance < 0.75 * n.distance:
                 pt1 = tuple(map(int, kp1[m.queryIdx].pt))
                 pt2 = tuple(map(int, kp2[m.trainIdx].pt))
                 good_matches.append([pt1, pt2])
