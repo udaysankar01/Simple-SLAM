@@ -12,8 +12,7 @@ A simple implementation of SLAM (Simultaneous Localization and Mapping) using Py
 
 ## TODO
 
-- Implement alternative methods for cleaning up matches.
-- Integrate more advanced SLAM techniques.
+- Integrate more advanced SLAM features.
 - Optimize performance for real-time processing.
 
 ## Usage
