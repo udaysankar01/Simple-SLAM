@@ -2,6 +2,8 @@ import cv2
 import math
 import numpy as np
 from display import Display
+from skimage.measure import ransac
+from skimage.transform import FundamentalMatrixTransform
 
 display = Display()
 
@@ -20,12 +22,34 @@ class FeatureExtractorMatcher(object):
             kps, des = self.extractShiTomasi(img)
 
         # feature matching
+        matches = []
         if self.last is not None:
             matches = self.matchFeatures(img, (kps, des), self.last)
-            self.showKeypointsAndMacthes(img, kps, matches)
-        self.last = (kps, des)                                      ####### IS DICTIONARY BETTER???? 
 
-        return kps, des
+        # matches filtering using ransac and fundamental matrix
+        if len(matches) > 0:
+            x = np.array(matches)
+
+            random_seed = 9
+            rng = np.random.default_rng(random_seed)  
+            model, inliers = ransac(
+                (x[:, 0], x[:, 1]),
+                model_class=FundamentalMatrixTransform,
+                min_samples=8,
+                residual_threshold=1,
+                max_trials=100,
+                rng=rng,
+            )
+            print(f'Number of inliers: {inliers.sum()}')
+            matches = np.column_stack((x[:, 0][inliers], x[:, 1][inliers]))
+            matches = [((x1, y1), (x2, y2)) for (x1, y1, x2, y2) in matches]
+            self.showKeypointsAndMatches(img, kps, matches)
+
+        self.last = (kps, des)                                      ####### IS DICTIONARY BETTER???? 
+        return matches
+
+        
+        
 
 
     def extractShiTomasi(self, img):
@@ -116,11 +140,11 @@ class FeatureExtractorMatcher(object):
                 pt2 = tuple(map(int, kp2[m.trainIdx].pt))
                 good_matches.append([pt1, pt2])
 
-        print(len(good_matches), "matches.")
+        # print(len(good_matches), "matches.")
         return good_matches
 
     
-    def showKeypointsAndMacthes(self, img, kps, matches):
+    def showKeypointsAndMatches(self, img, kps, matches):
         # plotting keypoints on the image
         img = cv2.drawKeypoints(img, kps, None, color=(0, 255, 0), flags=0)
 

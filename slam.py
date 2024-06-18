@@ -5,7 +5,7 @@ from feature import FeatureExtractorMatcher
 feature_extractor = FeatureExtractorMatcher()
 
 def process_image(img):
-    kp, des = feature_extractor.extract(img, method='shitomasi')
+    macthes = feature_extractor.extract(img, method='shitomasi')
     return img
 
 def main():
