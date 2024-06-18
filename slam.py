@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 import cv2 
+import numpy as np
 from feature import FeatureExtractorMatcher
 
-feature_extractor = FeatureExtractorMatcher()
+W = 1920//2
+H = 1080//2
+F = 1
+K = np.array([[F, 0, W//2], [0, F, H//2], [0, 0, 1]])
+
+feature_extractor = FeatureExtractorMatcher(K, W, H)
 
 def process_image(img):
     macthes = feature_extractor.extract(img, method='shitomasi')

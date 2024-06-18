@@ -3,16 +3,25 @@ import math
 import numpy as np
 from display import Display
 from skimage.measure import ransac
-from skimage.transform import FundamentalMatrixTransform
+from skimage.transform import FundamentalMatrixTransform, EssentialMatrixTransform
 
-display = Display()
+
+def homogeneous_coord(x):
+    return np.concatenate([x, np.ones((x.shape[0], 1))], axis=1)
 
 class FeatureExtractorMatcher(object):
 
-    def __init__(self):
+    def __init__(self, K, W, H):
         self.orb = cv2.ORB_create(500)
         self.bf = cv2.BFMatcher(cv2.NORM_HAMMING)
         self.last = None
+        self.K = K
+        self.Kinv = np.linalg.inv(K)
+        self.display = Display(W, H)
+
+    def denormalize(self, pt):
+        ret = np.dot(self.K, np.array([pt[0], pt[1], 1.0]))
+        return int(round(ret[0])), int(round(ret[1]))
 
     def extract(self, img, method = 'orb'):
         # feature extraction
@@ -26,32 +35,34 @@ class FeatureExtractorMatcher(object):
         if self.last is not None:
             matches = self.matchFeatures(img, (kps, des), self.last)
 
+
         # matches filtering using ransac and fundamental matrix
         if len(matches) > 0:
-            x = np.array(matches)
+            matches = np.array(matches)
+            x = np.copy(matches)
+
+            # normalizing for essential matrix
+            x[:, 0, :] = np.dot(self.Kinv, homogeneous_coord(x[:, 0, :]).T)[:2, :].T
+            x[:, 1, :] = np.dot(self.Kinv, homogeneous_coord(x[:, 1, :]).T)[:2, :].T
 
             random_seed = 9
             rng = np.random.default_rng(random_seed)  
             model, inliers = ransac(
                 (x[:, 0], x[:, 1]),
-                model_class=FundamentalMatrixTransform,
+                model_class=EssentialMatrixTransform,
                 min_samples=8,
-                residual_threshold=1,
+                residual_threshold=1.5,
                 max_trials=100,
                 rng=rng,
             )
-            print(f'Number of inliers: {inliers.sum()}')
-            matches = np.column_stack((x[:, 0][inliers], x[:, 1][inliers]))
-            matches = [((x1, y1), (x2, y2)) for (x1, y1, x2, y2) in matches]
+            print(f'{inliers.sum()} matches')
+            matches = x[inliers]
             self.showKeypointsAndMatches(img, kps, matches)
 
-        self.last = (kps, des)                                      ####### IS DICTIONARY BETTER???? 
+        self.last = (kps, des)                            
         return matches
 
         
-        
-
-
     def extractShiTomasi(self, img):
         # Shi Tomasi corner detection
         keypoints = []
@@ -135,7 +146,7 @@ class FeatureExtractorMatcher(object):
         # ratio test
         good_matches = []
         for m, n in matches:
-            if m.distance < 0.75 * n.distance:
+            if m.distance < 0.5 * n.distance:
                 pt1 = tuple(map(int, kp1[m.queryIdx].pt))
                 pt2 = tuple(map(int, kp2[m.trainIdx].pt))
                 good_matches.append([pt1, pt2])
@@ -150,5 +161,7 @@ class FeatureExtractorMatcher(object):
 
         # plotting the matches on the image
         for (pt1, pt2) in matches:
+            pt1 = self.denormalize(pt1)
+            pt2 = self.denormalize(pt2)
             cv2.line(img, pt1, pt2, (255, 0, 0), 1)
-        display.show(img) 
+        self.display.show(img) 

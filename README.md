@@ -8,7 +8,7 @@ A simple implementation of SLAM (Simultaneous Localization and Mapping) using Py
   - [ ] ORB features are clustered -- ANMS?
 - [x] Feature matching using Brute Force Matching (knn matching -- no cross checks).
   - [x] Clean up matches using ratio test -- takes care of most outlier matches.
-  - [x] Clean up remaining matches using alternative methods -- ransac with Fundamental Matrix
+  - [x] Clean up remaining matches using alternative methods -- ransac with Essential Matrix
 
 ## TODO
 
@@ -25,7 +25,7 @@ A simple implementation of SLAM (Simultaneous Localization and Mapping) using Py
 2. **Feature Matching:**
    - Brute Force Matching
    - Ratio test for cleaning up matches
-   - Ransac with Fundamental Matrix to remove outlier matches
+   - Ransac with Essential Matrix to remove outlier matches
 
 ## Installation
 
