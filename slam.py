@@ -2,13 +2,11 @@
 
 import cv2 
 import numpy as np
-
-W = 1920//2
-H = 1080//2
+from frame import FeatureExtractor
 
 def process_image(img):
-    img = cv2.resize(img, (W, H))
-    cv2.imshow('frame', img)
+    feature_extractor = FeatureExtractor()
+    kp, des = feature_extractor.extract(img, method='shitomasi')
     return img
 
 def main():
@@ -18,7 +16,7 @@ def main():
         ret, frame = cap.read()
         if ret:
             frame = process_image(frame)
-            if cv2.waitKey(25) & 0xFF == ord('q'): 
+            if cv2.waitKey(1) & 0xFF == ord('q'): 
                 break
         else:
             break
