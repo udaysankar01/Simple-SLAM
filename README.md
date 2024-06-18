@@ -5,6 +5,7 @@ A simple implementation of SLAM (Simultaneous Localization and Mapping) using Py
 ## Features
 
 - [x] Feature detection using ORB feature detection or Shi-Tomasi corner detection.
+  - [ ] ORB features are clustered -- ANMS?
 - [x] Feature matching using Brute Force Matching.
   - [x] Clean up matches using ratio test.
   - [ ] Clean up matches using alternative methods -- RANSAC?

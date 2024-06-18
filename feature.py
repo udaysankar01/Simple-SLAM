@@ -9,7 +9,7 @@ class FeatureExtractorMatcher(object):
 
     def __init__(self):
         self.orb = cv2.ORB_create(500)
-        self.bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+        self.bf = cv2.BFMatcher(cv2.NORM_HAMMING)
         self.last = None
 
     def extract(self, img, method = 'orb'):
@@ -22,14 +22,7 @@ class FeatureExtractorMatcher(object):
         # feature matching
         if self.last is not None:
             matches = self.matchFeatures(img, (kps, des), self.last)
-
-            # ratio test
-            good_matches = []
-            for i, (pt1, pt2) in enumerate(matches):
-                if math.dist(pt1, pt2) < 100:
-                    good_matches.append((pt1, pt2))
-
-            self.showKeypointsAndMacthes(img, kps, good_matches)
+            self.showKeypointsAndMacthes(img, kps, matches)
         self.last = (kps, des)                                      ####### IS DICTIONARY BETTER???? 
 
         return kps, des
@@ -93,7 +86,7 @@ class FeatureExtractorMatcher(object):
         return keypoints, descriptors
     
 
-    def matchFeatures(self, img, current, last):      ############## CLEAN UP
+    def matchFeatures(self, img, current, last):
         """
         Matches the features between the current and last frame.
         
@@ -113,21 +106,23 @@ class FeatureExtractorMatcher(object):
         """
         kp1, des1 = last
         kp2, des2 = current
-        matches = self.bf.match(des1, des2)                   
-        print(len(matches), "matches.")
-        
-        def get_coords(match):
-            pt1 = tuple(map(int, kp1[match.queryIdx].pt))
-            pt2 = tuple(map(int, kp2[match.trainIdx].pt))
-            return (pt1, pt2)
-        
-        matches = list(map(get_coords, matches))
-        return matches
+        matches = self.bf.knnMatch(des1, des2, k=2)                   
+
+        # ratio test
+        good_matches = []
+        for m, n in matches:
+            if m.distance < 0.45 * n.distance:
+                pt1 = tuple(map(int, kp1[m.queryIdx].pt))
+                pt2 = tuple(map(int, kp2[m.trainIdx].pt))
+                good_matches.append([pt1, pt2])
+
+        print(len(good_matches), "matches.")
+        return good_matches
 
     
     def showKeypointsAndMacthes(self, img, kps, matches):
         # plotting keypoints on the image
-        img = cv2.drawKeypoints(img, kps, None, color=(0,255,0), flags=0)
+        img = cv2.drawKeypoints(img, kps, None, color=(0, 255, 0), flags=0)
 
         # plotting the matches on the image
         for (pt1, pt2) in matches:
