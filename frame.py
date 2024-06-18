@@ -1,24 +1,53 @@
 import cv2
+import math
 import numpy as np
 from display import Display
 
-class FeatureExtractor(object):
+display = Display()
+
+class FeatureExtractorMatcher(object):
 
     def __init__(self):
         self.orb = cv2.ORB_create(500)
-        self.display = Display()
+        self.last = None
 
     def extract(self, img, method = 'orb'):
         # extracts the features for matching
         if method == 'orb':
-            kp, des = self.orb_extract(img)
+            kps, des = self.orb_extract(img)
 
         elif method == 'shitomasi':
-            kp, des = self.shiTomasi_extract(img)
+            kps, des = self.shiTomasi_extract(img)
 
-        self.showKeypoints(img, kp)
-        return kp, des
+        # for matching
+        if self.last is not None:
+            self.matchFeatures(img, (kps, des), self.last)
+        self.last = (kps, des)
 
+        self.showKeypoints(img, kps)
+        return kps, des
+
+
+    def matchFeatures(self, img, current, last):
+
+        kp1, des1 = last
+        kp2, des2 = current
+        bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+        matches = bf.match(des1, des2)                             # tuple of match type
+        
+        def get_coords(match):
+            pt1 = tuple(map(int, kp1[match.queryIdx].pt))
+            pt2 = tuple(map(int, kp2[match.trainIdx].pt))
+            return (pt1, pt2)
+        matches_1 = list(map(get_coords, matches))
+        for (pt1, pt2) in matches_1:
+            if math.dist(pt1, pt2) < 100:
+                cv2.line(img, pt1, pt2, (255, 0, 0), 1)
+        display.show(img) 
+
+    # def showMatches(self, img, matches):
+
+    
     def shiTomasi_extract(self, img):
         # Shi Tomasi corner detection
         keypoints = []
@@ -62,4 +91,4 @@ class FeatureExtractor(object):
 
     def showKeypoints(self, img, kp):
         img = cv2.drawKeypoints(img, kp, None, color=(0,255,0), flags=0)
-        self.display.show(img)
+        display.show(img)

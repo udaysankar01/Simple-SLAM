@@ -2,10 +2,11 @@
 
 import cv2 
 import numpy as np
-from frame import FeatureExtractor
+from frame import FeatureExtractorMatcher
+
+feature_extractor = FeatureExtractorMatcher()
 
 def process_image(img):
-    feature_extractor = FeatureExtractor()
     kp, des = feature_extractor.extract(img, method='shitomasi')
     return img
 
