@@ -1,6 +1,6 @@
 # Simple-SLAM
 
-A simple implementation of SLAM (Simultaneous Localization and Mapping) using Python.
+A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) using Python.
 
 ## Features
 
@@ -8,7 +8,9 @@ A simple implementation of SLAM (Simultaneous Localization and Mapping) using Py
   - [ ] ORB features are clustered -- ANMS?
 - [x] Feature matching using Brute Force Matching (knn matching -- no cross checks).
   - [x] Clean up matches using ratio test -- takes care of most outlier matches.
-  - [x] Clean up remaining matches using alternative methods -- ransac with Essential Matrix
+  - [x] Clean up remaining matches using alternative methods -- RANSAC with Essential Matrix.
+- [x] Get rotation and translation from Essential Matrix.
+  - [x] Fix the error in translation vector.
 
 ## TODO
 
@@ -23,9 +25,13 @@ A simple implementation of SLAM (Simultaneous Localization and Mapping) using Py
    - Shi-Tomasi corner detection
 
 2. **Feature Matching:**
+
    - Brute Force Matching
    - Ratio test for cleaning up matches
-   - Ransac with Essential Matrix to remove outlier matches
+   - RANSAC with Essential Matrix to remove outlier matches
+
+3. **Rotation and Translation Estimation:**
+   - Estimation of rotation and translation from the Essential Matrix.
 
 ## Installation
 

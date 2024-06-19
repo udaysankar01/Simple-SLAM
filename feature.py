@@ -4,11 +4,8 @@ import numpy as np
 from display import Display
 from skimage.measure import ransac
 from skimage.transform import FundamentalMatrixTransform, EssentialMatrixTransform
+from utils import *
 np.set_printoptions(suppress=True)
-
-
-def homogeneous_coord(x):
-    return np.concatenate([x, np.ones((x.shape[0], 1))], axis=1)
 
 class FeatureExtractorMatcher(object):
 
@@ -32,18 +29,16 @@ class FeatureExtractorMatcher(object):
         matches = []
         if self.last is not None:
             current = (kps, des)
-            matches = self.matchFeatures(current, self.last)
+            matches = self.matchFeatures(self.last, current)
 
-        # matches filtering using ransac and fundamental matrix
+        # filtering matches using ransac and fundamental matrix
         matches_ransac = []
+        Rt = None
         if len(matches) > 0:
             x = np.array(matches)
-
-            # normalizing for essential matrix
             x[:, 0, :] = self.normalize_points(x[:, 0, :])
             x[:, 1, :] = self.normalize_points(x[:, 1, :])
 
-            # ransac to find essential matrix
             random_seed = 5
             rng = np.random.default_rng(random_seed)  
             model, inliers = ransac(
@@ -51,22 +46,21 @@ class FeatureExtractorMatcher(object):
                 # FundamentalMatrixTransform,
                 EssentialMatrixTransform,
                 min_samples=8,
-                residual_threshold=0.3,
+                residual_threshold=0.04,
                 max_trials=200,
                 rng=rng,
             )
-            print(f'{inliers.sum()} inliers out of {len(matches)} matches')
+            print(f'{inliers.sum()} inliers')
             matches_ransac = x[inliers]
             self.showKeypointsAndMatches(img, matches_ransac)
-            
-            F = model.params
-            _, D, _ = np.linalg.svd(F)
-            print(D)
+
+            Rt = extractRt(model.params)
+            print(Rt)
 
         self.last = (kps, des)                          ############################## maybe replace with a dictionary       
-        return matches_ransac
+        return matches_ransac, Rt
 
-        
+    
     def extractShiTomasi(self, img):
         """
         Extracts Shi Tomasi features from the image.
@@ -176,8 +170,8 @@ class FeatureExtractorMatcher(object):
         for (pt1, pt2) in matches:
             u1, v1 = map(int, self.denormalize_point(pt1))
             u2, v2 = map(int, self.denormalize_point(pt2))
-            cv2.circle(img, (u2, v2), 3, (0, 255,0), 2)
-            cv2.line(img, (u1, v1), (u2, v2), (255, 0, 0), 2)
+            cv2.circle(img, (u2, v2), 2, (0, 255,0), 1)
+            cv2.line(img, (u1, v1), (u2, v2), (255, 0, 0), 1)
         self.display.show(img) 
 
     def normalize_points(self, pts):
@@ -191,10 +185,11 @@ class FeatureExtractorMatcher(object):
 
         Returns
         -------
-        np.array
+        normalized_points: np.array
             The normalized points.
         """
-        return np.dot(self.Kinv, homogeneous_coord(pts).T).T[:, 0:2]
+        normalized_points = np.dot(self.Kinv, homogeneous_coord(pts).T).T[:, 0:2]
+        return normalized_points
 
     def denormalize_point(self, pt):
         """
@@ -210,6 +205,6 @@ class FeatureExtractorMatcher(object):
         denormalized_point : tuple
             The denormalized point.
         """
-        temp = np.dot(self.K, np.array([pt[0], pt[1], 1.0]))
-        denormalized_point = int(round(temp[0])), int(round(temp[1]))
+        ret = np.dot(self.K, np.array([pt[0], pt[1], 1.0]))
+        denormalized_point =  int(round(ret[0])), int(round(ret[1]))
         return denormalized_point

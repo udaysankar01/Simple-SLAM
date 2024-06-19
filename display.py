@@ -32,5 +32,4 @@ class Display(object):
         -------
         None
         """
-        img = cv2.resize(img, (self.W, self.H))
         cv2.imshow('frame', img)

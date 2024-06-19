@@ -5,13 +5,16 @@ from feature import FeatureExtractorMatcher
 
 W = 1920//2
 H = 1080//2
-F = 210
+F = 280
 K = np.array([[F, 0, W//2], [0, F, H//2], [0, 0, 1]])
 
 feature_extractor = FeatureExtractorMatcher(K, W, H)
 
 def process_image(img):
-    macthes = feature_extractor.extract(img, method='shitomasi')
+    img = cv2.resize(img, (W,H))
+    matches, Rt = feature_extractor.extract(img, method='shitomasi')
+    if Rt is None:
+        return
     return img
 
 def main():

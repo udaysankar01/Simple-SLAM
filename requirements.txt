@@ -1,4 +1,5 @@
 imageio==2.34.1
+joblib==1.4.2
 lazy_loader==0.4
 networkx==3.3
 numpy==1.26.4
@@ -6,5 +7,7 @@ opencv-python==4.10.0.82
 packaging==24.1
 pillow==10.3.0
 scikit-image==0.23.2
+scikit-learn==1.5.0
 scipy==1.13.1
+threadpoolctl==3.5.0
 tifffile==2024.5.22
