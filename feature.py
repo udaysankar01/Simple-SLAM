@@ -4,6 +4,7 @@ import numpy as np
 from display import Display
 from skimage.measure import ransac
 from skimage.transform import FundamentalMatrixTransform, EssentialMatrixTransform
+np.set_printoptions(suppress=True)
 
 
 def homogeneous_coord(x):
@@ -19,11 +20,8 @@ class FeatureExtractorMatcher(object):
         self.Kinv = np.linalg.inv(K)
         self.display = Display(W, H)
 
-    def denormalize(self, pt):
-        ret = np.dot(self.K, np.array([pt[0], pt[1], 1.0]))
-        return int(round(ret[0])), int(round(ret[1]))
 
-    def extract(self, img, method = 'orb'):
+    def extract(self, img, method = 'shitomasi'):
         # feature extraction
         if method == 'orb':
             kps, des = self.extractOrb(img)
@@ -33,48 +31,62 @@ class FeatureExtractorMatcher(object):
         # feature matching
         matches = []
         if self.last is not None:
-            matches = self.matchFeatures(img, (kps, des), self.last)
-
+            current = (kps, des)
+            matches = self.matchFeatures(current, self.last)
 
         # matches filtering using ransac and fundamental matrix
+        matches_ransac = []
         if len(matches) > 0:
-            matches = np.array(matches)
-            x = np.copy(matches)
+            x = np.array(matches)
 
             # normalizing for essential matrix
-            x[:, 0, :] = np.dot(self.Kinv, homogeneous_coord(x[:, 0, :]).T)[:2, :].T
-            x[:, 1, :] = np.dot(self.Kinv, homogeneous_coord(x[:, 1, :]).T)[:2, :].T
+            x[:, 0, :] = self.normalize_points(x[:, 0, :])
+            x[:, 1, :] = self.normalize_points(x[:, 1, :])
 
-            random_seed = 9
+            # ransac to find essential matrix
+            random_seed = 5
             rng = np.random.default_rng(random_seed)  
             model, inliers = ransac(
                 (x[:, 0], x[:, 1]),
-                model_class=EssentialMatrixTransform,
+                # FundamentalMatrixTransform,
+                EssentialMatrixTransform,
                 min_samples=8,
-                residual_threshold=1.5,
-                max_trials=100,
+                residual_threshold=0.3,
+                max_trials=200,
                 rng=rng,
             )
-            print(f'{inliers.sum()} matches')
-            matches = x[inliers]
-            self.showKeypointsAndMatches(img, kps, matches)
+            print(f'{inliers.sum()} inliers out of {len(matches)} matches')
+            matches_ransac = x[inliers]
+            self.showKeypointsAndMatches(img, matches_ransac)
+            
+            F = model.params
+            _, D, _ = np.linalg.svd(F)
+            print(D)
 
-        self.last = (kps, des)                            
-        return matches
+        self.last = (kps, des)                          ############################## maybe replace with a dictionary       
+        return matches_ransac
 
         
     def extractShiTomasi(self, img):
-        # Shi Tomasi corner detection
-        keypoints = []
-        gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-        corners = cv2.goodFeaturesToTrack(gray_img, 3000, 0.01, 7)
-        keypoints = [cv2.KeyPoint(x=pt[0][0], y=pt[0][1], size=20) for pt in corners]
-        
-        # compute orb description for the shi tomasi corners
-        keypoints, descriptors = self.orb.compute(img, keypoints)
-        
-        return keypoints, descriptors
+        """
+        Extracts Shi Tomasi features from the image.
 
+        Parameters
+        ----------
+        img : np.array
+            The image to extract features from.
+
+        Returns
+        -------
+        keypoints : list
+            List of keypoints.
+        descriptors : np.array
+            The descriptors of the keypoints.
+        """
+        features = cv2.goodFeaturesToTrack(cv2.cvtColor(img, cv2.COLOR_RGB2GRAY), 3000, 0.01, 3)
+        keypoints = [cv2.KeyPoint(x=feature[0][0], y=feature[0][1], size=20) for feature in features]
+        keypoints, descriptors = self.orb.compute(img, keypoints)
+        return keypoints, descriptors
 
     def extractOrb(self, img):
         """
@@ -120,15 +132,13 @@ class FeatureExtractorMatcher(object):
         
         return keypoints, descriptors
     
-
-    def matchFeatures(self, img, current, last):
+    def matchFeatures(self, current, last):
         """
         Matches the features between the current and last frame.
+        Also filters the matches using the ratio test.
         
         Parameters
         ----------
-        img : np.array
-            The current frame.
         current : tuple
             The keypoints and descriptors of the current frame.
         last : tuple
@@ -136,32 +146,70 @@ class FeatureExtractorMatcher(object):
 
         Returns
         -------
-        matches : list
-            List of matched keypoints.
+        good_matches : list
+            The list of matched keypoints.
         """
-        kp1, des1 = last
-        kp2, des2 = current
-        matches = self.bf.knnMatch(des1, des2, k=2)                   
-
-        # ratio test
         good_matches = []
+        matches = self.bf.knnMatch(current[1], last[1], k=2)                   
         for m, n in matches:
             if m.distance < 0.5 * n.distance:
-                pt1 = tuple(map(int, kp1[m.queryIdx].pt))
-                pt2 = tuple(map(int, kp2[m.trainIdx].pt))
-                good_matches.append([pt1, pt2])
-
-        # print(len(good_matches), "matches.")
+                kp1 = current[0][m.queryIdx].pt
+                kp2 = last[0][m.trainIdx].pt
+                good_matches.append((kp1, kp2))
         return good_matches
 
-    
-    def showKeypointsAndMatches(self, img, kps, matches):
-        # plotting keypoints on the image
-        img = cv2.drawKeypoints(img, kps, None, color=(0, 255, 0), flags=0)
+    def showKeypointsAndMatches(self, img, matches):
+        """
+        Displays the keypoints and matches on the image.
 
-        # plotting the matches on the image
+        Parameters
+        ----------
+        img : np.array
+            The image to display the keypoints and matches on.
+        matches : list
+            The list of matched keypoints.
+
+        Returns
+        -------
+        None
+        """
         for (pt1, pt2) in matches:
-            pt1 = self.denormalize(pt1)
-            pt2 = self.denormalize(pt2)
-            cv2.line(img, pt1, pt2, (255, 0, 0), 1)
+            u1, v1 = map(int, self.denormalize_point(pt1))
+            u2, v2 = map(int, self.denormalize_point(pt2))
+            cv2.circle(img, (u2, v2), 3, (0, 255,0), 2)
+            cv2.line(img, (u1, v1), (u2, v2), (255, 0, 0), 2)
         self.display.show(img) 
+
+    def normalize_points(self, pts):
+        """
+        Normalizes a set of points using the inverse of the camera intrinsic matrix.
+
+        Parameters
+        ----------
+        pts : np.array
+            The points to normalize.
+
+        Returns
+        -------
+        np.array
+            The normalized points.
+        """
+        return np.dot(self.Kinv, homogeneous_coord(pts).T).T[:, 0:2]
+
+    def denormalize_point(self, pt):
+        """
+        Denormalizes assingle point using the camera intrinsic matrix.
+
+        Parameters
+        ----------
+        pt : tuple
+            The point to denormalize.
+
+        Returns
+        -------
+        denormalized_point : tuple
+            The denormalized point.
+        """
+        temp = np.dot(self.K, np.array([pt[0], pt[1], 1.0]))
+        denormalized_point = int(round(temp[0])), int(round(temp[1]))
+        return denormalized_point

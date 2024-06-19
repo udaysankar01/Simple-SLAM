@@ -5,7 +5,7 @@ from feature import FeatureExtractorMatcher
 
 W = 1920//2
 H = 1080//2
-F = 1
+F = 210
 K = np.array([[F, 0, W//2], [0, F, H//2], [0, 0, 1]])
 
 feature_extractor = FeatureExtractorMatcher(K, W, H)
