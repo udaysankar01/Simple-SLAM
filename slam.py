@@ -1,18 +1,22 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 import cv2 
 import numpy as np
-from feature import FeatureExtractorMatcher
+from feature import FeatureExtractor, FeatureMatcher
+from frame import Frame
+import g2o
 
 W = 1920//2
 H = 1080//2
 F = 280
 K = np.array([[F, 0, W//2], [0, F, H//2], [0, 0, 1]])
 
-feature_extractor = FeatureExtractorMatcher(K, W, H)
+feature_extractor = FeatureExtractor(method='shitomasi')
+feature_matcher = FeatureMatcher(K, W, H)
 
 def process_image(img):
     img = cv2.resize(img, (W,H))
-    matches, Rt = feature_extractor.extract(img, method='shitomasi')
+    frame = Frame(img, K, feature_extractor)
+    matches, Rt = feature_matcher.match(frame)
     if Rt is None:
         return
     return img

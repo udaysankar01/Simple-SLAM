@@ -2,7 +2,7 @@
 
 A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) using Python.
 
-## Features
+## Tasks
 
 - [x] Feature detection using ORB feature detection or Shi-Tomasi corner detection.
   - [ ] ORB features are clustered -- ANMS?
