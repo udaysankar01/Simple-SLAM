@@ -50,3 +50,8 @@ def homogeneous_coord(x):
         The points in homogeneous coordinates.
     """
     return np.concatenate([x, np.ones((x.shape[0], 1))], axis=1)
+
+def normalize_points(pts, Kinv):
+
+        normalized_points = np.dot(Kinv, homogeneous_coord(pts).T).T[:, 0:2]
+        return normalized_points

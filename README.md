@@ -31,7 +31,11 @@ A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) u
    - RANSAC with Essential Matrix to remove outlier matches
 
 3. **Rotation and Translation Estimation:**
+
    - Estimation of rotation and translation from the Essential Matrix.
+
+4. **Triangulation:**
+   - Triangulation of 3D points from the matched features.
 
 ## Installation
 

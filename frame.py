@@ -1,4 +1,5 @@
 import numpy as np
+from utils import normalize_points
 
 class Frame(object):
 
@@ -9,4 +10,7 @@ class Frame(object):
         self.Kinv = np.linalg.inv(K)
         
         self.kps, self.des = extractor.extract(img)
-        self.Rt = None
+        self.pts = np.array(extractor.keypointsToPoints(self.kps))
+        self.pts = normalize_points(self.pts, self.Kinv)
+        # self.pts = np.array([])
+        self.Rt = np.eye(4)

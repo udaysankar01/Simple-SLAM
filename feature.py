@@ -26,6 +26,13 @@ class FeatureExtractor(object):
         
         return kps, des
     
+    def keypointsToPoints(self, keypoints):
+        points = []
+        for keypoint in keypoints:
+            points.append(keypoint.pt)
+        points = np.array(points)
+        return points
+    
     def extractShiTomasi(self, img):
         """
         Extracts Shi Tomasi features from the image.
@@ -45,6 +52,8 @@ class FeatureExtractor(object):
         features = cv2.goodFeaturesToTrack(cv2.cvtColor(img, cv2.COLOR_RGB2GRAY), 3000, 0.01, 3)
         keypoints = [cv2.KeyPoint(x=feature[0][0], y=feature[0][1], size=20) for feature in features]
         keypoints, descriptors = self.orb.compute(img, keypoints)
+        keypoints = np.array(keypoints)
+        descriptors = np.array(descriptors)
         return keypoints, descriptors
 
     def extractOrb(self, img):
@@ -88,7 +97,7 @@ class FeatureExtractor(object):
                             descriptors = des
                         else:
                             descriptors = np.vstack((descriptors, des))
-        
+        keypoints = np.array(keypoints)
         return keypoints, descriptors
         
     
@@ -99,87 +108,47 @@ class FeatureMatcher(object):
         self.K = K
         self.Kinv = np.linalg.inv(K)
         self.display = Display(W, H)
-        self.last = None
 
-    def match(self, frame, last=None):
-        matches = []
-        self.last = last
+    def match(self, frame, last):
+        idx1 = []
+        idx2 = []
 
         # feature matching
-        if self.last is not None:
-            current = frame
-            matches = self.matchFeatures(self.last, current)
+        idxFrame, idxLast = self.matchFeatures(frame, last)
 
-        # filtering matches using ransac and fundamental matrix
-        matches_ransac = []
-        Rt = None
-        if len(matches) > 0:
-            x = np.array(matches)
-            x[:, 0, :] = self.normalize_points(x[:, 0, :])
-            x[:, 1, :] = self.normalize_points(x[:, 1, :])
+        # filtering matches using ransac and essential matrix
+        model, inliers = ransac(
+            (frame.pts[idxFrame], last.pts[idxLast]),
+            # FundamentalMatrixTransform,
+            EssentialMatrixTransform,
+            min_samples=8,
+            residual_threshold=0.04,
+            max_trials=200,
+        )
+        print(f'{inliers.sum()} inliers')
+        idxFrame = idxFrame[inliers]
+        idxLast = idxLast[inliers]
+        self.showKeypointsAndMatches(frame, frame.pts[idxFrame], last.pts[idxLast])
 
-            random_seed = 5
-            rng = np.random.default_rng(random_seed)  
-            model, inliers = ransac(
-                (x[:, 0], x[:, 1]),
-                # FundamentalMatrixTransform,
-                EssentialMatrixTransform,
-                min_samples=8,
-                residual_threshold=0.04,
-                max_trials=200,
-                rng=rng,
-            )
-            print(f'{inliers.sum()} inliers')
-            matches_ransac = x[inliers]
-            self.showKeypointsAndMatches(frame, matches_ransac)
-        
-            Rt = extractRt(model.params)
-        
-        self.last = frame    
-        return matches_ransac, Rt
+        Rt = extractRt(model.params)
+ 
+        return idxFrame, idxLast, Rt
 
-    def matchFeatures(self, current, last):
-        """
-        Matches the features between the current and last frame.
-        Also filters the matches using the ratio test.
-        
-        Parameters
-        ----------
-        current : frame.Frame
-            The current frame.
-        last : frame.Frame
-            The last frame.
+    def matchFeatures(self, frame, last):
 
-        Returns
-        -------
-        good_matches : list
-            The list of matched keypoints.
-        """
-        good_matches = []
-        matches = self.bf.knnMatch(current.des, last.des, k=2)                   
+        idxFrame = []
+        idxLast = []
+        matches = self.bf.knnMatch(frame.des, last.des, k=2)                   
         for m, n in matches:
             if m.distance < 0.5 * n.distance:
-                kp1 = current.kps[m.queryIdx].pt
-                kp2 = last.kps[m.trainIdx].pt
-                good_matches.append((kp1, kp2))
-        return good_matches
+                idxFrame.append(m.queryIdx)
+                idxLast.append(m.trainIdx)
+        assert len(idxFrame) > 8
+        idxFrame = np.array(idxFrame)
+        idxLast = np.array(idxLast)
+        
+        return idxFrame, idxLast
 
-    def normalize_points(self, pts):
-        """
-        Normalizes a set of points using the inverse of the camera intrinsic matrix.
-
-        Parameters
-        ----------
-        pts : np.array
-            The points to normalize.
-
-        Returns
-        -------
-        normalized_points: np.array
-            The normalized points.
-        """
-        normalized_points = np.dot(self.Kinv, homogeneous_coord(pts).T).T[:, 0:2]
-        return normalized_points
 
     def denormalize_point(self, pt):
         """
@@ -199,7 +168,7 @@ class FeatureMatcher(object):
         denormalized_point =  int(round(ret[0])), int(round(ret[1]))
         return denormalized_point
     
-    def showKeypointsAndMatches(self, frame, matches):
+    def showKeypointsAndMatches(self, frame, frame_inliers, last_inliers):
         """
         Displays the keypoints and matches on the image.
 
@@ -214,11 +183,10 @@ class FeatureMatcher(object):
         -------
         None
         """
-        img = frame.img
-        for (pt1, pt2) in matches:
+        for (pt1, pt2) in zip(frame_inliers, last_inliers):
             u1, v1 = map(int, self.denormalize_point(pt1))
             u2, v2 = map(int, self.denormalize_point(pt2))
-            cv2.circle(img, (u2, v2), 2, (0, 255,0), 1)
-            cv2.line(img, (u1, v1), (u2, v2), (255, 0, 0), 1)
-        self.display.show(img) 
+            cv2.circle(frame.img, (u1, v1), 2, (0, 255,0), 1)
+            cv2.line(frame.img, (u1, v1), (u2, v2), (255, 0, 0), 1)
+        self.display.show(frame.img) 
 
