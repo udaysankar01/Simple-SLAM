@@ -19,6 +19,21 @@ class FeatureExtractor(object):
         self.orb = cv2.ORB_create(500)
     
     def extract(self, img):
+        """
+        Extracts features from the image.
+
+        Parameters
+        ----------
+        img : np.array
+            The image to extract features from.
+
+        Returns
+        -------
+        kps : np.array
+            The keypoints.
+        des : np.array
+            The descriptors of the keypoints.
+        """
         if self.method == 'orb':
             kps, des = self.extractOrb(img)
         elif self.method == 'shitomasi':
@@ -27,6 +42,19 @@ class FeatureExtractor(object):
         return kps, des
     
     def keypointsToPoints(self, keypoints):
+        """
+        Converts the keypoints to points.
+
+        Parameters
+        ----------
+        keypoints : np.array
+            The OpenCV keypoints to convert.
+
+        Returns
+        -------
+        points : np.array
+            The points.
+        """
         points = []
         for keypoint in keypoints:
             points.append(keypoint.pt)
@@ -44,8 +72,8 @@ class FeatureExtractor(object):
 
         Returns
         -------
-        keypoints : list
-            List of keypoints.
+        keypoints : np.array
+            Array of keypoints.
         descriptors : np.array
             The descriptors of the keypoints.
         """
@@ -109,16 +137,32 @@ class FeatureMatcher(object):
         self.Kinv = np.linalg.inv(K)
         self.display = Display(W, H)
 
-    def match(self, frame, last):
-        idx1 = []
-        idx2 = []
+    def match(self, frame1, frame2):
+        """
+        Matches the features of the frames and returns the inliers and the projection matrix.
 
+        Parameters
+        ----------
+        frame1 : frame.Frame
+            The first frame.
+        frame2 : frame.Frame
+            The second frame.
+
+        Returns
+        -------
+        idx1 : np.array
+            The indices of the inliers in the first frame.
+        idx2 : np.array
+            The indices of the inliers in the second frame.
+        Rt : np.array
+            The 3x4 projection matrix.
+        """
         # feature matching
-        idxFrame, idxLast = self.matchFeatures(frame, last)
+        idx1, idx2 = self.matchFeatures(frame1, frame2)
 
         # filtering matches using ransac and essential matrix
         model, inliers = ransac(
-            (frame.pts[idxFrame], last.pts[idxLast]),
+            (frame1.pts[idx1], frame2.pts[idx2]),
             # FundamentalMatrixTransform,
             EssentialMatrixTransform,
             min_samples=8,
@@ -126,29 +170,44 @@ class FeatureMatcher(object):
             max_trials=200,
         )
         print(f'{inliers.sum()} inliers')
-        idxFrame = idxFrame[inliers]
-        idxLast = idxLast[inliers]
-        self.showKeypointsAndMatches(frame, frame.pts[idxFrame], last.pts[idxLast])
+        idx1 = idx1[inliers]
+        idx2 = idx2[inliers]
+        self.showKeypointsAndMatches(frame1, frame1.pts[idx1], frame2.pts[idx2])
 
         Rt = extractRt(model.params)
  
-        return idxFrame, idxLast, Rt
+        return idx1, idx2, Rt
 
-    def matchFeatures(self, frame, last):
+    def matchFeatures(self, frame1, frame2):
+        """
+        Matches the features of the frames.
 
-        idxFrame = []
-        idxLast = []
-        matches = self.bf.knnMatch(frame.des, last.des, k=2)                   
+        Parameters
+        ----------
+        frame1 : frame.Frame
+            The first frame.
+        frame2 : frame.Frame
+            The second frame.
+
+        Returns
+        -------
+        idx1 : np.array
+            The indices of the inliers in the first frame.
+        idx2 : np.array
+            The indices of the inliers in the second frame.
+        """
+        idx1 = []
+        idx2 = []
+        matches = self.bf.knnMatch(frame1.des, frame2.des, k=2)                   
         for m, n in matches:
             if m.distance < 0.5 * n.distance:
-                idxFrame.append(m.queryIdx)
-                idxLast.append(m.trainIdx)
-        assert len(idxFrame) > 8
-        idxFrame = np.array(idxFrame)
-        idxLast = np.array(idxLast)
+                idx1.append(m.queryIdx)
+                idx2.append(m.trainIdx)
+        assert len(idx1) > 8
+        idx1 = np.array(idx1)
+        idx2 = np.array(idx2)
         
-        return idxFrame, idxLast
-
+        return idx1, idx2
 
     def denormalize_point(self, pt):
         """
@@ -175,9 +234,11 @@ class FeatureMatcher(object):
         Parameters
         ----------
         frame : frame.Frame
-            The frame to show the keypoints and matches on.
-        matches : list
-            The list of matched keypoints.
+            The frame to display the keypoints and matches on.
+        frame_inliers : np.array
+            The inliers of the current frame.
+        last_inliers : np.array
+            The inliers of the last frame.
 
         Returns
         -------
