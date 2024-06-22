@@ -9,3 +9,4 @@ class Frame(object):
         self.Kinv = np.linalg.inv(K)
         
         self.kps, self.des = extractor.extract(img)
+        self.Rt = None

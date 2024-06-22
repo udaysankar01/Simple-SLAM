@@ -101,8 +101,9 @@ class FeatureMatcher(object):
         self.display = Display(W, H)
         self.last = None
 
-    def match(self, frame):
+    def match(self, frame, last=None):
         matches = []
+        self.last = last
 
         # feature matching
         if self.last is not None:
@@ -133,7 +134,6 @@ class FeatureMatcher(object):
             self.showKeypointsAndMatches(frame, matches_ransac)
         
             Rt = extractRt(model.params)
-            print(Rt)
         
         self.last = frame    
         return matches_ransac, Rt

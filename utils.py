@@ -29,7 +29,9 @@ def extractRt(E):
         R = np.dot(U, np.dot(W.T, Vt))
     t = U[:, 2]
 
-    Rt = np.concatenate([R, t.reshape(3, 1)], axis=1)
+    Rt = np.eye(4)
+    Rt[:3, :3] = R
+    Rt[:3, 3] = t
     
     return Rt
 
