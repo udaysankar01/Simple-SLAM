@@ -41,6 +41,10 @@ A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) u
 
 ## Installation
 
+This project requires the Python binding for Pangolin. The Pangolin library is a lightweight portable rapid development library for managing OpenGL display / interaction and abstracting video input. To install Pangolin, use this repo:
+
+https://github.com/uoip/pangolin
+
 To install the required dependencies, run:
 
 ```sh
