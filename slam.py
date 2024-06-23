@@ -13,7 +13,8 @@ from feature import FeatureExtractor, FeatureMatcher
 # camera intrinsic properties
 W = 1920//2
 H = 1080//2
-F = 280
+# F = 280
+F = 800
 K = np.array([[F, 0, W//2], [0, F, H//2], [0, 0, 1]])
 
 feature_extractor = FeatureExtractor(method='shitomasi')
@@ -24,7 +25,8 @@ display = Display(W, H) if os.getenv('D2D') is not None else None
 
 def triangulate(pose1, pose2, pts1, pts2):
     points_4d = np.zeros((pts1.shape[0], 4))
-
+    pose1 = np.linalg.inv(pose1)                 # not sure why we need to invert the pose
+    pose2 = np.linalg.inv(pose2)
     for i in range(pts1.shape[0]):
         A = np.zeros((4, 4))
         A[0] = pts1[i, 0] * pose1[2] - pose1[0]
@@ -46,6 +48,7 @@ def process_image(img):
         return
     
     idx1, idx2, slam_map.frames[-1].Rt = feature_matcher.match(slam_map.frames[-1], slam_map.frames[-2])
+    print(slam_map.frames[-1].Rt)
 
     # triangulate points
     slam_map.frames[-1].Rt = np.dot(slam_map.frames[-2].Rt, slam_map.frames[-1].Rt)
@@ -57,6 +60,7 @@ def process_image(img):
     pts4d = pts4d[filter_pts3d_index]
     pts4d /= pts4d[:, 3].reshape(-1, 1)
     pts4d = pts4d[pts4d[:, 2] > 0]
+
 
     for p in pts4d:
         pt = Point(slam_map, p)
@@ -72,7 +76,7 @@ def process_image(img):
 
 
 def main():
-    cap = cv2.VideoCapture('videos/test.mp4')
+    cap = cv2.VideoCapture('videos/test_ohio.mp4')
     
     while(cap.isOpened()):
         ret, frame = cap.read()

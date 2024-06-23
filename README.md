@@ -14,6 +14,7 @@ A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) u
 - [x] Triangulate 3D points from the matched features.
   - [x] Implement a Map class to store the 3D points.
   - [x] Build and visualize the 3D map using Pangolin.
+  - [x] Fix Bug: Camera Drift in XY Plane during Slow Movement --> caused by error in intrinsic matrix.
 - [ ] Write the optimizer for the 3D map
 
 ## TODO

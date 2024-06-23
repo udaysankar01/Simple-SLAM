@@ -36,7 +36,7 @@ class FeatureExtractor(object):
         if self.method == 'orb':
             kps, des = self.extractOrb(img)
         elif self.method == 'shitomasi':
-            kps, des = self.extractShiTomasi(img)
+            kps, des = self.extractShiTomasi(img, n_points=1000)
         
         return kps, des
     
@@ -60,7 +60,7 @@ class FeatureExtractor(object):
         points = np.array(points)
         return points
     
-    def extractShiTomasi(self, img):
+    def extractShiTomasi(self, img, n_points=1000):
         """
         Extracts Shi Tomasi features from the image.
 
@@ -76,7 +76,7 @@ class FeatureExtractor(object):
         descriptors : np.array
             The descriptors of the keypoints.
         """
-        features = cv2.goodFeaturesToTrack(cv2.cvtColor(img, cv2.COLOR_RGB2GRAY), 3000, 0.01, 3)
+        features = cv2.goodFeaturesToTrack(cv2.cvtColor(img, cv2.COLOR_RGB2GRAY), n_points, 0.01, 10)
         keypoints = [cv2.KeyPoint(x=feature[0][0], y=feature[0][1], size=20) for feature in features]
         keypoints, descriptors = self.orb.compute(img, keypoints)
         keypoints = np.array(keypoints)
@@ -166,9 +166,9 @@ class FeatureMatcher(object):
             EssentialMatrixTransform,
             min_samples=8,
             residual_threshold=0.04,
-            max_trials=200,
+            max_trials=100,
         )
-        print(f'{inliers.sum()} inliers')
+        # print(f'{inliers.sum()} inliers')
         idx1 = idx1[inliers]
         idx2 = idx2[inliers]
 
@@ -199,8 +199,12 @@ class FeatureMatcher(object):
         matches = self.bf.knnMatch(frame1.des, frame2.des, k=2)                   
         for m, n in matches:
             if m.distance < 0.5 * n.distance:
-                idx1.append(m.queryIdx)
-                idx2.append(m.trainIdx)
+                p1 = frame1.pts[m.queryIdx]
+                p2 = frame2.pts[m.trainIdx]
+                if np.linalg.norm(p1 - p2) < 0.5:
+                    idx1.append(m.queryIdx)
+                    idx2.append(m.trainIdx)
+
         assert len(idx1) > 8
         idx1 = np.array(idx1)
         idx2 = np.array(idx2)
