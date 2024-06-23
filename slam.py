@@ -23,11 +23,9 @@ display = Display(W, H) if os.getenv('D2D') is not None else None
 
 
 def triangulate(pose1, pose2, pts1, pts2):
-    # return cv2.triangulatePoints(pose1[:3], pose2[:3], pts1.T, pts2.T).T
-    num_points = pts1.shape[0]
-    points_4d = np.zeros((num_points, 4))
+    points_4d = np.zeros((pts1.shape[0], 4))
 
-    for i in range(num_points):
+    for i in range(pts1.shape[0]):
         A = np.zeros((4, 4))
         A[0] = pts1[i, 0] * pose1[2] - pose1[0]
         A[1] = pts1[i, 1] * pose1[2] - pose1[1]
@@ -36,7 +34,7 @@ def triangulate(pose1, pose2, pts1, pts2):
 
         _, _, Vt = np.linalg.svd(A)
         X = Vt[-1]
-        points_4d[i] = X  # Keep the homogeneous coordinates
+        points_4d[i] = X
 
     return points_4d
 
