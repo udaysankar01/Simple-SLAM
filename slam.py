@@ -3,6 +3,8 @@ import cv2
 import numpy as np
 import g2o
 import os
+import sys
+import argparse
 
 from utils import *
 from mappoint import Map, Point
@@ -10,16 +12,20 @@ from frame import Frame
 from display import Display 
 from feature import FeatureExtractor, FeatureMatcher
 
+# hard set this!!!!
+# F = 280
+F = int(os.getenv('F', 800))
+
 # camera intrinsic properties
 W = 1920//2
 H = 1080//2
-# F = 280
-F = 800
 K = np.array([[F, 0, W//2], [0, F, H//2], [0, 0, 1]])
+
 
 feature_extractor = FeatureExtractor(method='shitomasi')
 feature_matcher = FeatureMatcher(K, W, H)
-slam_map = Map()    
+slam_map = Map()   
+slam_map.create_viewer() if os.getenv('D3D') is not None else None 
 display = Display(W, H) if os.getenv('D2D') is not None else None
 
 
@@ -48,7 +54,7 @@ def process_image(img):
         return
     
     idx1, idx2, slam_map.frames[-1].Rt = feature_matcher.match(slam_map.frames[-1], slam_map.frames[-2])
-    print(slam_map.frames[-1].Rt)
+    # print(slam_map.frames[-1].Rt)
 
     # triangulate points
     slam_map.frames[-1].Rt = np.dot(slam_map.frames[-2].Rt, slam_map.frames[-1].Rt)
@@ -75,8 +81,13 @@ def process_image(img):
     slam_map.display()
 
 
-def main():
-    cap = cv2.VideoCapture('videos/test_ohio.mp4')
+if __name__ == '__main__':
+    args = argparse.ArgumentParser()
+    args.add_argument('--video', '-v', required=True, help='Path to video file')
+    args = args.parse_args()
+    print(args.video)
+
+    cap = cv2.VideoCapture(args.video)
     
     while(cap.isOpened()):
         ret, frame = cap.read()
@@ -87,11 +98,5 @@ def main():
         else:
             break
     
-
     cap.release()
-    cv2.destroyAllWindows()
-    slam_map.stop_viewer()
-    
-
-if __name__ == '__main__':
-    main()
+    cv2.destroyAllWindows()    

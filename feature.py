@@ -6,6 +6,8 @@ from skimage.transform import FundamentalMatrixTransform, EssentialMatrixTransfo
 from utils import *
 np.set_printoptions(suppress=True)
 
+focal_length_estimation_flag = False # not tested yet!
+focal_lengths = []
 
 class FeatureExtractor(object):
 
@@ -158,16 +160,35 @@ class FeatureMatcher(object):
         """
         # feature matching
         idx1, idx2 = self.matchFeatures(frame1, frame2)
+        frame1_pts = frame1.pts[idx1].copy()
+        frame2_pts = frame2.pts[idx2].copy()
+
+        # ransac hyperparameters
+        model_class = EssentialMatrixTransform
+        min_samples = 8
+        residual_threshold = 0.04
+        max_trials = 100
+        
+        if focal_length_estimation_flag:
+            frame1_pts = frame1.pts_unnorm[idx1].copy()
+            frame2_pts = frame2.pts_unnorm[idx2].copy()
+            model_class = FundamentalMatrixTransform
+            residual_threshold = 1
+            max_trials = 1000
 
         # filtering matches using ransac and essential matrix
         model, inliers = ransac(
-            (frame1.pts[idx1], frame2.pts[idx2]),
-            # FundamentalMatrixTransform,
-            EssentialMatrixTransform,
-            min_samples=8,
-            residual_threshold=0.04,
-            max_trials=100,
+            (frame1_pts, frame2_pts),
+            model_class,
+            min_samples=min_samples,
+            residual_threshold=residual_threshold,
+            max_trials=max_trials,
         )
+        if focal_length_estimation_flag:
+            
+            _, D, _ = np.linalg.svd(model.params)
+            print(D)
+            
         # print(f'{inliers.sum()} inliers')
         idx1 = idx1[inliers]
         idx2 = idx2[inliers]
@@ -199,12 +220,11 @@ class FeatureMatcher(object):
         matches = self.bf.knnMatch(frame1.des, frame2.des, k=2)                   
         for m, n in matches:
             if m.distance < 0.5 * n.distance:
-                p1 = frame1.pts[m.queryIdx]
-                p2 = frame2.pts[m.trainIdx]
-                if np.linalg.norm(p1 - p2) < 0.5:
+                p1 = frame1.pts_unnorm[m.queryIdx]
+                p2 = frame2.pts_unnorm[m.trainIdx]
+                if np.linalg.norm(p1 - p2) < 0.1*frame1.W:
                     idx1.append(m.queryIdx)
                     idx2.append(m.trainIdx)
-
         assert len(idx1) > 8
         idx1 = np.array(idx1)
         idx2 = np.array(idx2)

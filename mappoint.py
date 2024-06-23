@@ -8,17 +8,18 @@ class Map(object):
     def __init__(self):
         self.frames = []
         self.points = []
+        self.state = None
+        self.q = None
 
-        # create viewer process
+    def create_viewer(self):
         self.q = Queue()
         self.viewer_process = Process(target=self.viewer_thread, args=(self.q,))
         self.viewer_process.daemon = True
-        self.state = None
         self.viewer_process.start()
 
     def viewer_thread(self, q):
-        self.viewerInit(1024, 768)
 
+        self.viewerInit(1024, 768)
         self.state = None
         flag = True
         while not pangolin.ShouldQuit():
@@ -31,7 +32,7 @@ class Map(object):
 
         # Define Projection and initial ModelView matrix
         self.scam = pangolin.OpenGlRenderState(
-            pangolin.ProjectionMatrix(w, h, 420, 420, w//2, h//2, 0.2, 1000),
+            pangolin.ProjectionMatrix(w, h, 420, 420, w//2, h//2, 0.2, 10000),
             pangolin.ModelViewLookAt(0, -10, -8, 
                                      0, 0, 0, 
                                      0, -0.1, 0))
@@ -67,9 +68,12 @@ class Map(object):
         self.viewer_process.join()
 
     def display(self):
+        if self.q is None:
+            return
         Rts = [frame.Rt for frame in self.frames]
         pts = [point.position for point in self.points]
         self.q.put((Rts, pts))
+
 
 class Point(object):
     

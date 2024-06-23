@@ -15,7 +15,9 @@ A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) u
   - [x] Implement a Map class to store the 3D points.
   - [x] Build and visualize the 3D map using Pangolin.
   - [x] Fix Bug: Camera Drift in XY Plane during Slow Movement --> caused by error in intrinsic matrix.
-- [ ] Write the optimizer for the 3D map
+- [ ] Tracking of points over multiple frames.
+- [ ] g2o based optimization.
+- [ ] point culling.
 
 ## TODO
 
@@ -40,7 +42,7 @@ A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) u
    - Estimation of rotation and translation from the Essential Matrix.
 
 4. **Triangulation:**
-   - Triangulation of 3D points from the matched features.
+   - Triangulation of 3D points using Direct Linear Transform (DLT).
 
 ## Installation
 
@@ -59,5 +61,5 @@ pip install -r requirements.txt
 To run the program:
 
 ```sh
-./slam.py
+D2D=1 D3D=1 ./slam.py --video <video_file>
 ```
