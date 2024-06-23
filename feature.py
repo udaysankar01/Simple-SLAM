@@ -1,5 +1,4 @@
 import cv2
-import math
 import numpy as np
 from display import Display
 from skimage.measure import ransac
@@ -172,7 +171,6 @@ class FeatureMatcher(object):
         print(f'{inliers.sum()} inliers')
         idx1 = idx1[inliers]
         idx2 = idx2[inliers]
-        self.showKeypointsAndMatches(frame1, frame1.pts[idx1], frame2.pts[idx2])
 
         Rt = extractRt(model.params)
  
@@ -208,46 +206,3 @@ class FeatureMatcher(object):
         idx2 = np.array(idx2)
         
         return idx1, idx2
-
-    def denormalize_point(self, pt):
-        """
-        Denormalizes assingle point using the camera intrinsic matrix.
-
-        Parameters
-        ----------
-        pt : tuple
-            The point to denormalize.
-
-        Returns
-        -------
-        denormalized_point : tuple
-            The denormalized point.
-        """
-        ret = np.dot(self.K, np.array([pt[0], pt[1], 1.0]))
-        denormalized_point =  int(round(ret[0])), int(round(ret[1]))
-        return denormalized_point
-    
-    def showKeypointsAndMatches(self, frame, frame_inliers, last_inliers):
-        """
-        Displays the keypoints and matches on the image.
-
-        Parameters
-        ----------
-        frame : frame.Frame
-            The frame to display the keypoints and matches on.
-        frame_inliers : np.array
-            The inliers of the current frame.
-        last_inliers : np.array
-            The inliers of the last frame.
-
-        Returns
-        -------
-        None
-        """
-        for (pt1, pt2) in zip(frame_inliers, last_inliers):
-            u1, v1 = map(int, self.denormalize_point(pt1))
-            u2, v2 = map(int, self.denormalize_point(pt2))
-            cv2.circle(frame.img, (u1, v1), 2, (0, 255,0), 1)
-            cv2.line(frame.img, (u1, v1), (u2, v2), (255, 0, 0), 1)
-        self.display.show(frame.img) 
-

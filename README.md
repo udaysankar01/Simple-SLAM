@@ -11,8 +11,10 @@ A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) u
   - [x] Clean up remaining matches using alternative methods -- RANSAC with Essential Matrix.
 - [x] Get rotation and translation from Essential Matrix.
   - [x] Fix the error in translation vector.
-- [ ] Triangulate 3D points from the matched features.
-  - [ ] Implement a Map class to store the 3D points.
+- [x] Triangulate 3D points from the matched features.
+  - [x] Implement a Map class to store the 3D points.
+  - [x] Build and visualize the 3D map using Pangolin.
+- [ ] Write the optimizer for the 3D map
 
 ## TODO
 

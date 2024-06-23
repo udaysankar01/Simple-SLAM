@@ -55,3 +55,8 @@ def normalize_points(pts, Kinv):
 
         normalized_points = np.dot(Kinv, homogeneous_coord(pts).T).T[:, 0:2]
         return normalized_points
+
+def denormalize_point(pt, K):
+        ret = np.dot(K, np.array([pt[0], pt[1], 1.0]))
+        denormalized_point =  int(round(ret[0])), int(round(ret[1]))
+        return denormalized_point

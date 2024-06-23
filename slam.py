@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 import cv2 
 import numpy as np
-from feature import FeatureExtractor, FeatureMatcher
-from frame import Frame
 import g2o
+import os
+
 from utils import *
+from mappoint import Map, Point
+from frame import Frame
+from display import Display 
+from feature import FeatureExtractor, FeatureMatcher
 
-from multiprocessing import Process, Queue
-import pangolin
-import OpenGL.GL as gl
-
+# camera intrinsic properties
 W = 1920//2
 H = 1080//2
 F = 280
@@ -17,91 +18,28 @@ K = np.array([[F, 0, W//2], [0, F, H//2], [0, 0, 1]])
 
 feature_extractor = FeatureExtractor(method='shitomasi')
 feature_matcher = FeatureMatcher(K, W, H)
-
-class Map(object):
-    def __init__(self):
-        self.frames = []
-        self.points = []
-
-        # create viewer process
-        self.q = Queue()
-        self.viewer_process = Process(target=self.viewer_thread, args=(self.q,))
-        self.viewer_process.daemon = True
-        self.state = None
-        self.viewer_process.start()
-
-    def viewer_thread(self, q):
-        self.viewerInit()
-
-        self.state = None
-        flag = True
-        while not pangolin.ShouldQuit():
-            self.viewerUpdate(q)
-
-    
-    def viewerInit(self):
-        pangolin.CreateWindowAndBind('SLAM', 640, 480)
-        gl.glEnable(gl.GL_DEPTH_TEST)
-
-        # Define Projection and initial ModelView matrix
-        self.scam = pangolin.OpenGlRenderState(
-            pangolin.ProjectionMatrix(640, 480, 420, 420, 320, 240, 0.2, 100),
-            pangolin.ModelViewLookAt(-2, 2, -2, 0, 0, 0, pangolin.AxisDirection.AxisY))
-        self.handler = pangolin.Handler3D(self.scam)
-
-        # Create Interactive View in window
-        self.dcam = pangolin.CreateDisplay()
-        self.dcam.SetBounds(0.0, 1.0, 0.0, 1.0, -640.0/480.0)
-        self.dcam.SetHandler(self.handler)
-
-    def viewerUpdate(self, q):
-        if self.state is None or not q.empty():
-                self.state = q.get()
-        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
-        gl.glClearColor(1.0, 1.0, 1.0, 1.0)
-        self.dcam.Activate(self.scam)
-
-        gl.glPointSize(10)
-        gl.glColor(0.0, 1.0, 0.0)
-        pangolin.DrawPoints(np.array([d[:3, 3] for d in self.state[0]]))
-                
-        gl.glPointSize(2)
-        gl.glColor(0.0, 1.0, 0.0)
-        pangolin.DrawPoints(np.array(self.state[1]))   
-
-        pangolin.FinishFrame()
-
-    def stop_viewer(self):
-        self.viewer_process.terminate()
-        self.viewer_process.join()
-
-    def display(self):
-        Rts = [frame.Rt for frame in self.frames]
-        pts = [point.position for point in self.points]
-        self.q.put((Rts, pts))
-
-
 slam_map = Map()    
-
-class Point(object):
-    
-    def __init__(self, slam_map, position):
-        self.frames = []
-        self.position = position
-        self.idxs = []
-        
-        self.id = len(slam_map.points)
-        slam_map.points.append(self)
-
-
-    def add_observation(self, frame, idx):
-        self.frames.append(frame)
-        self.idxs.append(idx)
-
+display = Display(W, H) if os.getenv('D2D') is not None else None
 
 
 def triangulate(pose1, pose2, pts1, pts2):
-    return cv2.triangulatePoints(pose1[:3], pose2[:3], pts1.T, pts2.T).T
+    # return cv2.triangulatePoints(pose1[:3], pose2[:3], pts1.T, pts2.T).T
+    num_points = pts1.shape[0]
+    points_4d = np.zeros((num_points, 4))
+
+    for i in range(num_points):
+        A = np.zeros((4, 4))
+        A[0] = pts1[i, 0] * pose1[2] - pose1[0]
+        A[1] = pts1[i, 1] * pose1[2] - pose1[1]
+        A[2] = pts2[i, 0] * pose2[2] - pose2[0]
+        A[3] = pts2[i, 1] * pose2[2] - pose2[1]
+
+        _, _, Vt = np.linalg.svd(A)
+        X = Vt[-1]
+        points_4d[i] = X  # Keep the homogeneous coordinates
+
+    return points_4d
+
 
 def process_image(img):
     img = cv2.resize(img, (W,H))
@@ -113,6 +51,7 @@ def process_image(img):
 
     # triangulate points
     slam_map.frames[-1].Rt = np.dot(slam_map.frames[-2].Rt, slam_map.frames[-1].Rt)
+    # pts4d = triangulate(slam_map.frames[-1].Rt, slam_map.frames[-2].Rt, slam_map.frames[-1].pts[idx1], slam_map.frames[-2].pts[idx2])
     pts4d = triangulate(slam_map.frames[-1].Rt, slam_map.frames[-2].Rt, slam_map.frames[-1].pts[idx1], slam_map.frames[-2].pts[idx2])
 
     # reject unwanted points
@@ -126,6 +65,11 @@ def process_image(img):
         pt.add_observation(slam_map.frames[-1], idx1)
         pt.add_observation(slam_map.frames[-2], idx2)
     
+    # 2D visualization
+    if display is not None:
+        display.showKeypointsAndMatches(slam_map, idx1, idx2)
+
+    # 3D visualization
     slam_map.display()
 
 
