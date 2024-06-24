@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.spatial import KDTree
 
 import pangolin
 import OpenGL.GL as gl
@@ -10,6 +11,25 @@ class Map(object):
         self.points = []
         self.state = None
         self.q = None
+        # test
+        self.kdtree = None
+        self.positions = [] # list to store positions for kdtree
+
+    def updateKDTree(self):
+        if self.positions:
+            self.kdtree = KDTree(np.array(self.positions))
+
+    def addOrUpdatePoint(self, new_pt):
+        if self.kdtree is not None:
+            dist, idx = self.kdtree.query(new_pt, distance_upper_bound=0.1)
+            if dist < float('inf'):
+                existing_point = self.points[idx]
+                print(new_pt, existing_point.position)
+                return existing_point
+        new_point = Point(self, new_pt)
+        self.positions.append(new_pt)
+        self.updateKDTree()
+        return new_point
 
     def create_viewer(self):
         self.q = Queue()
@@ -18,7 +38,6 @@ class Map(object):
         self.viewer_process.start()
 
     def viewer_thread(self, q):
-
         self.viewerInit(1024, 768)
         self.state = None
         flag = True
@@ -84,7 +103,7 @@ class Point(object):
         
         self.id = len(slam_map.points)
         slam_map.points.append(self)
-        
+
     def add_observation(self, frame, idx):
         frame.kps[idx] = self
         self.frames.append(frame)

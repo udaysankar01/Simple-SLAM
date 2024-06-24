@@ -38,7 +38,7 @@ def process_image(img):
     idx1, idx2, pts3d = feature_matcher.matchAndUpdate(slam_map.frames[-1], slam_map.frames[-2])
 
     for p in pts3d:
-        pt = Point(slam_map, p)
+        pt = slam_map.addOrUpdatePoint(p)
         pt.add_observation(slam_map.frames[-1], idx1)
         pt.add_observation(slam_map.frames[-2], idx2)
     
