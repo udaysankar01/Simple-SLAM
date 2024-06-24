@@ -47,16 +47,45 @@ def homogeneous_coord(x):
     Returns
     -------
     np.array
-        The points in homogeneous coordinates.
+        The points in homogeneous 
     """
     return np.concatenate([x, np.ones((x.shape[0], 1))], axis=1)
 
 def normalize_points(pts, Kinv):
+    """
+    Normalize the points using the camera intrinsics.
 
-        normalized_points = np.dot(Kinv, homogeneous_coord(pts).T).T[:, 0:2]
-        return normalized_points
+    Parameters
+    ----------
+    pts : np.array
+        The points to normalize.
+    Kinv : np.array
+        The inverse of the camera intrinsics matrix.
+
+    Returns
+    -------
+    np.array
+        The normalized points.
+    """
+    normalized_points = np.dot(Kinv, homogeneous_coord(pts).T).T[:, 0:2]
+    return normalized_points
 
 def denormalize_point(pt, K):
-        ret = np.dot(K, np.array([pt[0], pt[1], 1.0]))
-        denormalized_point =  int(round(ret[0])), int(round(ret[1]))
-        return denormalized_point
+    """
+    Denormalize the point using the camera intrinsics.
+
+    Parameters
+    ----------
+    pt : tuple
+        The point to denormalize.
+    K : np.array
+        The camera intrinsics matrix.
+
+    Returns
+    -------
+    denormalized_point : tuple
+        The denormalized point.
+    """
+    ret = np.dot(K, np.array([pt[0], pt[1], 1.0]))
+    denormalized_point =  int(round(ret[0])), int(round(ret[1]))
+    return denormalized_point

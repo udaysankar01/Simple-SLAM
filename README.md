@@ -18,8 +18,9 @@ A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) u
   - [x] Fix Bug: Camera Drift in XY Plane during Slow Movement --> caused by error in intrinsic matrix.
 - [ ] Tracking of points over multiple frames.
   - [x] Implement a Point class to store the 2D-3D correspondences.
-  - [ ] Track the points over multiple frames.
+  - [x] Track the points over multiple frames.
 - [ ] g2o based optimization.
+  - [x] Build g2opy library.
 - [ ] point culling.
 
 ## TODO
@@ -49,15 +50,19 @@ A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) u
    - Triangulation of 3D points using Direct Linear Transform (DLT).
 
 5. **Mapping:**
+
    - Check for existing 3D points in the map.
    - Add new 3D points to the map.
    - Visualize the 3D map using Pangolin.
+
+6. **Optimization:**
+   - g2o based optimization.
 
 ## Installation
 
 This project is coded using Python 3.10.14.
 
-This project requires the Python binding for Pangolin. The Pangolin library is a lightweight portable rapid development library for managing OpenGL display / interaction and abstracting video input. To install Pangolin, use this repo:
+This project requires the Python binding for Pangolin. The Pangolin library is a lightweight portable rapid development library for managing OpenGL display / interaction and abstracting video input. Pangolin library is used alongside OpenGL library to visualize the 3D map. To install Pangolin, use this repo:
 
 https://github.com/uoip/pangolin
 

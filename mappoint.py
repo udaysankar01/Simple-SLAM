@@ -10,9 +10,12 @@ class Map(object):
         self.points = []
         self.state = None
         self.q = None
-        # test
-        self.kdtree = None
-        self.positions = [] # list to store positions for kdtree
+
+    # ---- Optimizer ----
+    def optimize(self):
+        pass
+
+    # ------ Viewer ------
 
     def create_viewer(self):
         self.q = Queue()
