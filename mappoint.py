@@ -84,8 +84,8 @@ class Point(object):
         
         self.id = len(slam_map.points)
         slam_map.points.append(self)
-
-
+        
     def add_observation(self, frame, idx):
+        frame.kps[idx] = self
         self.frames.append(frame)
         self.idxs.append(idx)

@@ -138,6 +138,16 @@ class FeatureMatcher(object):
         self.Kinv = np.linalg.inv(K)
         self.display = Display(W, H)
 
+    def matchAndUpdate(self, current, previous):
+        idx1, idx2, Rt = self.match(current, previous)
+        current.Rt = np.dot(previous.Rt, Rt)
+        pts3d = self.triangulate(current.Rt, previous.Rt, current.pts[idx1], previous.pts[idx2])
+    
+        current.addMatches(previous, idx1, idx2, pts3d)
+        previous.addMatches(current, idx2, idx1, pts3d)
+
+        return idx1, idx2, pts3d
+
     def match(self, frame1, frame2):
         """
         Matches the features of the frames and returns the inliers and the projection matrix.
@@ -230,3 +240,24 @@ class FeatureMatcher(object):
         idx2 = np.array(idx2)
         
         return idx1, idx2
+
+    def triangulate(self, pose1, pose2, pts1, pts2):
+        pts4d = np.zeros((pts1.shape[0], 4))
+        pose1 = np.linalg.inv(pose1)                 # not sure why we need to invert the pose
+        pose2 = np.linalg.inv(pose2)
+        for i in range(pts1.shape[0]):
+            A = np.zeros((4, 4))
+            A[0] = pts1[i, 0] * pose1[2] - pose1[0]
+            A[1] = pts1[i, 1] * pose1[2] - pose1[1]
+            A[2] = pts2[i, 0] * pose2[2] - pose2[0]
+            A[3] = pts2[i, 1] * pose2[2] - pose2[1]
+
+            _, _, Vt = np.linalg.svd(A)
+            X = Vt[-1]
+            pts4d[i] = X
+
+        # reject unwanted points
+        filter_pts3d_index = (np.abs(pts4d[:, 3]) > 0.005) & (pts4d[:, 2] > 0)
+        pts4d = pts4d[filter_pts3d_index]
+        pts3d = pts4d / pts4d[:, 3].reshape(-1, 1)
+        return pts3d
