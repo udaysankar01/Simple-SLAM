@@ -4,6 +4,8 @@ from display import Display
 from skimage.measure import ransac
 from skimage.transform import FundamentalMatrixTransform, EssentialMatrixTransform
 from utils import *
+from mappoint import Point
+
 np.set_printoptions(suppress=True)
 
 focal_length_estimation_flag = False # not tested yet!
@@ -39,7 +41,7 @@ class FeatureExtractor(object):
             kps, des = self.extractOrb(img)
         elif self.method == 'shitomasi':
             kps, des = self.extractShiTomasi(img, n_points=1000)
-        
+        kps = np.array([(kp.pt[0], kp.pt[1]) for kp in kps])
         return kps, des
     
     def keypointsToPoints(self, keypoints):
@@ -138,15 +140,6 @@ class FeatureMatcher(object):
         self.Kinv = np.linalg.inv(K)
         self.display = Display(W, H)
 
-    def matchAndUpdate(self, current, previous):
-        idx1, idx2, Rt = self.match(current, previous)
-        current.Rt = np.dot(previous.Rt, Rt)
-        pts3d = self.triangulate(current.Rt, previous.Rt, current.pts[idx1], previous.pts[idx2])
-    
-        current.addMatches(previous, idx1, idx2, pts3d)
-        previous.addMatches(current, idx2, idx1, pts3d)
-
-        return idx1, idx2, pts3d
 
     def match(self, frame1, frame2):
         """
@@ -170,8 +163,8 @@ class FeatureMatcher(object):
         """
         # feature matching
         idx1, idx2 = self.matchFeatures(frame1, frame2)
-        frame1_pts = frame1.pts[idx1].copy()
-        frame2_pts = frame2.pts[idx2].copy()
+        frame1_pts = frame1.keypoints[idx1]
+        frame2_pts = frame2.keypoints[idx2]
 
         # ransac hyperparameters
         model_class = EssentialMatrixTransform
@@ -180,8 +173,8 @@ class FeatureMatcher(object):
         max_trials = 100
         
         if focal_length_estimation_flag:
-            frame1_pts = frame1.pts_unnorm[idx1].copy()
-            frame2_pts = frame2.pts_unnorm[idx2].copy()
+            frame1_pts = frame1.keypoints_unnorm[idx1]
+            frame2_pts = frame2.keypoints_unnorm[idx2]
             model_class = FundamentalMatrixTransform
             residual_threshold = 1
             max_trials = 1000
@@ -195,7 +188,6 @@ class FeatureMatcher(object):
             max_trials=max_trials,
         )
         if focal_length_estimation_flag:
-            
             _, D, _ = np.linalg.svd(model.params)
             print(D)
             
@@ -227,11 +219,11 @@ class FeatureMatcher(object):
         """
         idx1 = []
         idx2 = []
-        matches = self.bf.knnMatch(frame1.des, frame2.des, k=2)                   
+        matches = self.bf.knnMatch(frame1.descriptors, frame2.descriptors, k=2)                   
         for m, n in matches:
             if m.distance < 0.5 * n.distance:
-                p1 = frame1.pts_unnorm[m.queryIdx]
-                p2 = frame2.pts_unnorm[m.trainIdx]
+                p1 = frame1.keypoints[m.queryIdx]
+                p2 = frame2.keypoints[m.trainIdx]
                 if np.linalg.norm(p1 - p2) < 0.1*frame1.W:
                     idx1.append(m.queryIdx)
                     idx2.append(m.trainIdx)
@@ -241,23 +233,4 @@ class FeatureMatcher(object):
         
         return idx1, idx2
 
-    def triangulate(self, pose1, pose2, pts1, pts2):
-        pts4d = np.zeros((pts1.shape[0], 4))
-        pose1 = np.linalg.inv(pose1)                 # not sure why we need to invert the pose
-        pose2 = np.linalg.inv(pose2)
-        for i in range(pts1.shape[0]):
-            A = np.zeros((4, 4))
-            A[0] = pts1[i, 0] * pose1[2] - pose1[0]
-            A[1] = pts1[i, 1] * pose1[2] - pose1[1]
-            A[2] = pts2[i, 0] * pose2[2] - pose2[0]
-            A[3] = pts2[i, 1] * pose2[2] - pose2[1]
-
-            _, _, Vt = np.linalg.svd(A)
-            X = Vt[-1]
-            pts4d[i] = X
-
-        # reject unwanted points
-        filter_pts3d_index = (np.abs(pts4d[:, 3]) > 0.005) & (pts4d[:, 2] > 0)
-        pts4d = pts4d[filter_pts3d_index]
-        pts3d = pts4d / pts4d[:, 3].reshape(-1, 1)
-        return pts3d
+    

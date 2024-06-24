@@ -28,6 +28,21 @@ slam_map = Map()
 slam_map.create_viewer() if os.getenv('D3D') is not None else None 
 display = Display(W, H) if os.getenv('D2D') is not None else None
 
+def triangulate(pose1, pose2, pts1, pts2):
+    pts4d = np.zeros((pts1.shape[0], 4))
+    pose1 = np.linalg.inv(pose1)   
+    pose2 = np.linalg.inv(pose2)
+    for i in range(pts1.shape[0]):
+        A = np.zeros((4, 4))
+        A[0] = pts1[i, 0] * pose1[2] - pose1[0]
+        A[1] = pts1[i, 1] * pose1[2] - pose1[1]
+        A[2] = pts2[i, 0] * pose2[2] - pose2[0]
+        A[3] = pts2[i, 1] * pose2[2] - pose2[1]
+        _, _, Vt = np.linalg.svd(A)
+        pts4d[i] = Vt[-1]
+
+    return pts4d
+
 
 def process_image(img):
     img = cv2.resize(img, (W,H))
@@ -35,13 +50,28 @@ def process_image(img):
     if frame.id == 0:
         return
     
-    idx1, idx2, pts3d = feature_matcher.matchAndUpdate(slam_map.frames[-1], slam_map.frames[-2])
+    current = slam_map.frames[-1]
+    previous = slam_map.frames[-2]
+    idx1, idx2, Rt = feature_matcher.match(current, previous)
+    current.Rt = np.dot(Rt, previous.Rt)
 
-    for p in pts3d:
-        pt = slam_map.addOrUpdatePoint(p)
-        pt.add_observation(slam_map.frames[-1], idx1)
-        pt.add_observation(slam_map.frames[-2], idx2)
-    
+    for i in range(len(previous.pts)):
+        if previous.pts[i] is not None:
+            previous.pts
+
+    pts4d = triangulate(current.Rt, previous.Rt, current.keypoints[idx1], previous.keypoints[idx2])
+    parallax_idx = (np.abs(pts4d[:, 3]) > 0.005)
+    pts4d /= pts4d[:, 3:]
+    unmatched_pts = np.array([current.pts[i] is None for i in idx1]).astype(np.bool)
+    good_pts4d = parallax_idx & (pts4d[:, 2] > 0) & unmatched_pts
+
+    for i, p in enumerate(pts4d):
+        if not good_pts4d[i]:
+            continue
+        pt = Point(slam_map, p)
+        pt.add_observation(current, idx1[i])
+        pt.add_observation(previous, idx2[i])
+
     # 2D visualization
     if display is not None:
         display.showKeypointsAndMatches(slam_map, idx1, idx2)

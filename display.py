@@ -55,8 +55,8 @@ class Display(object):
         """
         
         frame = slam_map.frames[-1]
-        frame_inliers = slam_map.frames[-1].pts[idx1]
-        last_inliers = slam_map.frames[-2].pts[idx2]
+        frame_inliers = slam_map.frames[-1].keypoints[idx1]
+        last_inliers = slam_map.frames[-2].keypoints[idx2]
         for (pt1, pt2) in zip(frame_inliers, last_inliers):
             u1, v1 = map(int, denormalize_point(pt1, frame.K))
             u2, v2 = map(int, denormalize_point(pt2, frame.K))

@@ -16,6 +16,8 @@ A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) u
   - [x] Build and visualize the 3D map using Pangolin.
   - [x] Fix Bug: Camera Drift in XY Plane during Slow Movement --> caused by error in intrinsic matrix.
 - [ ] Tracking of points over multiple frames.
+  - [x] Implement a Point class to store the 2D-3D correspondences.
+  - [ ] Track the points over multiple frames.
 - [ ] g2o based optimization.
 - [ ] point culling.
 
@@ -42,7 +44,13 @@ A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) u
    - Estimation of rotation and translation from the Essential Matrix.
 
 4. **Triangulation:**
+
    - Triangulation of 3D points using Direct Linear Transform (DLT).
+
+5. **Mapping:**
+   - Check for existing 3D points in the map.
+   - Add new 3D points to the map.
+   - Visualize the 3D map using Pangolin.
 
 ## Installation
 
