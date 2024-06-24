@@ -3,7 +3,6 @@ import cv2
 import numpy as np
 import g2o
 import os
-import sys
 import argparse
 
 from utils import *
@@ -12,7 +11,6 @@ from frame import Frame
 from display import Display 
 from feature import FeatureExtractor, FeatureMatcher
 
-# hard set this!!!!
 # F = 280
 F = int(os.getenv('F', 800))
 
@@ -21,7 +19,7 @@ W = 1920//2
 H = 1080//2
 K = np.array([[F, 0, W//2], [0, F, H//2], [0, 0, 1]])
 
-
+# classes
 feature_extractor = FeatureExtractor(method='shitomasi')
 feature_matcher = FeatureMatcher(K, W, H)
 slam_map = Map()   
@@ -49,21 +47,25 @@ def process_image(img):
     frame = Frame(slam_map, img, K, feature_extractor)
     if frame.id == 0:
         return
-    
+    print(f"\n\n------ frame {frame.id} ------")
+
     current = slam_map.frames[-1]
     previous = slam_map.frames[-2]
     idx1, idx2, Rt = feature_matcher.match(current, previous)
     current.Rt = np.dot(Rt, previous.Rt)
 
-    for i in range(len(previous.pts)):
-        if previous.pts[i] is not None:
-            previous.pts
+    for i, idx in enumerate(idx2):
+        if previous.pts[idx] is not None:
+            previous.pts[idx].add_observation(current, idx1[i])
 
     pts4d = triangulate(current.Rt, previous.Rt, current.keypoints[idx1], previous.keypoints[idx2])
     parallax_idx = (np.abs(pts4d[:, 3]) > 0.005)
     pts4d /= pts4d[:, 3:]
+    # pts4d = np.dot(previous.Rt, pts4d.T).T
+
     unmatched_pts = np.array([current.pts[i] is None for i in idx1]).astype(np.bool)
     good_pts4d = parallax_idx & (pts4d[:, 2] > 0) & unmatched_pts
+    print(f"Adding {good_pts4d.sum()} points")
 
     for i, p in enumerate(pts4d):
         if not good_pts4d[i]:

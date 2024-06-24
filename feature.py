@@ -191,7 +191,7 @@ class FeatureMatcher(object):
             _, D, _ = np.linalg.svd(model.params)
             print(D)
             
-        # print(f'{inliers.sum()} inliers')
+        print(f'{inliers.sum()} inliers out of {len(idx1)} matches')
         idx1 = idx1[inliers]
         idx2 = idx2[inliers]
 
@@ -222,8 +222,8 @@ class FeatureMatcher(object):
         matches = self.bf.knnMatch(frame1.descriptors, frame2.descriptors, k=2)                   
         for m, n in matches:
             if m.distance < 0.5 * n.distance:
-                p1 = frame1.keypoints[m.queryIdx]
-                p2 = frame2.keypoints[m.trainIdx]
+                p1 = frame1.keypoints_unnorm[m.queryIdx]
+                p2 = frame2.keypoints_unnorm[m.trainIdx]
                 if np.linalg.norm(p1 - p2) < 0.1*frame1.W:
                     idx1.append(m.queryIdx)
                     idx2.append(m.trainIdx)

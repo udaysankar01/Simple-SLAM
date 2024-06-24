@@ -5,12 +5,13 @@ A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) u
 ## Tasks
 
 - [x] Feature detection using ORB feature detection or Shi-Tomasi corner detection.
+  - [x] Shi-Tomasi corner detection.
   - [ ] ORB features are clustered -- ANMS?
 - [x] Feature matching using Brute Force Matching (knn matching -- no cross checks).
   - [x] Clean up matches using ratio test -- takes care of most outlier matches.
   - [x] Clean up remaining matches using alternative methods -- RANSAC with Essential Matrix.
 - [x] Get rotation and translation from Essential Matrix.
-  - [x] Fix the error in translation vector.
+  - [x] Fix bug: error in translation vector.
 - [x] Triangulate 3D points from the matched features.
   - [x] Implement a Map class to store the 3D points.
   - [x] Build and visualize the 3D map using Pangolin.
