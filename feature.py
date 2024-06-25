@@ -224,9 +224,17 @@ class FeatureMatcher(object):
             if m.distance < 0.5 * n.distance:
                 p1 = frame1.keypoints_unnorm[m.queryIdx]
                 p2 = frame2.keypoints_unnorm[m.trainIdx]
-                if np.linalg.norm(p1 - p2) < 0.1*frame1.W:
-                    idx1.append(m.queryIdx)
-                    idx2.append(m.trainIdx)
+                if np.linalg.norm(p1 - p2) < 0.1*np.linalg.norm([frame1.W, frame1.H]) and m.distance < 32:
+                    
+                    # check for duplicates -- optimize this
+                    if m.queryIdx not in idx1 and m.trainIdx not in idx2:
+                        idx1.append(m.queryIdx)
+                        idx2.append(m.trainIdx)
+        
+        # check for duplicates 
+        assert(len(set(idx1)) == len(idx1))
+        assert(len(set(idx2)) == len(idx2))
+        
         assert len(idx1) > 8
         idx1 = np.array(idx1)
         idx2 = np.array(idx2)

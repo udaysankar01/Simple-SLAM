@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import cv2 
 import numpy as np
-import g2o
 import os
 import argparse
 
@@ -63,7 +62,7 @@ def process_image(img):
     pts4d /= pts4d[:, 3:]
     # pts4d = np.dot(previous.Rt, pts4d.T).T
 
-    unmatched_pts = np.array([current.pts[i] is None for i in idx1]).astype(np.bool)
+    unmatched_pts = np.array([current.pts[i] is None for i in idx1]).astype(bool)
     good_pts4d = parallax_idx & (pts4d[:, 2] > 0) & unmatched_pts
     print(f"Adding {good_pts4d.sum()} points")
 
@@ -73,6 +72,10 @@ def process_image(img):
         pt = Point(slam_map, p)
         pt.add_observation(current, idx1[i])
         pt.add_observation(previous, idx2[i])
+    
+    # g2o optimization
+    if frame.id > 2:
+        slam_map.optimize()
 
     # 2D visualization
     if display is not None:
