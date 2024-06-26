@@ -32,10 +32,12 @@ class Map(object):
 
         # add frames to the graph
         for frame in self.frames:
-
-            quaternion = g2o.Quaternion(frame.Rt[:3, :3])
+            
+            Rt = frame.Rt
+            Rt = np.linalg.inv(Rt)
+            quaternion = g2o.Quaternion(Rt[:3, :3])
             sbacam.set_rotation(quaternion)
-            sbacam.set_translation(frame.Rt[:3, 3])
+            sbacam.set_translation(Rt[:3, 3])
 
             v_cam = g2o.VertexCam()
             v_cam.set_id(frame.id)
@@ -64,6 +66,17 @@ class Map(object):
         opt.initialize_optimization()
         opt.set_verbose(True)
         opt.optimize(20)
+
+        # add frame poses back into map
+        for frame in self.frames:
+            Rt = opt.vertex(frame.id).estimate().to_homogeneous_matrix()
+            Rt = np.linalg.inv(Rt)
+            frame.Rt = Rt
+        
+        # add points to the map
+        # for point in self.points:
+        #     pt = opt.vertex(point.id + 0x10000).estimate()
+        #     point.position = np.array([pt[0], pt[1], pt[2], 1.0])
 
     # ------ Viewer ------
 

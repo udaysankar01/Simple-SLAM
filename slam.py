@@ -74,7 +74,7 @@ def process_image(img):
         pt.add_observation(previous, idx2[i])
     
     # g2o optimization
-    if frame.id > 2:
+    if frame.id > 4:
         slam_map.optimize()
 
     # 2D visualization
