@@ -1,7 +1,6 @@
 import numpy as np
 from multiprocessing import Process, Queue
 
-
 import g2o
 import pangolin
 import OpenGL.GL as gl
@@ -25,16 +24,12 @@ class Map(object):
         opt.set_algorithm(solver)
 
         sbacam = g2o.SBACam()
-        # camera parameters: fx, fy, cx, cy
-        fx, fy, cx, cy = self.frames[0].K[[0, 1, 0, 1], [0, 1, 2, 2]]
-        # cam_params = g2o.CameraParameters(fx, np.array([cx, cy]), 0)
-        sbacam.set_cam(fx, fy, cx, cy, 0)
+        sbacam.set_cam(1.0, 1.0, 0.0, 0.0, 0)   # camera parameters: fx, fy, cx, cy, baseline
+        # sbacam.set_cam()
 
         # add frames to the graph
         for frame in self.frames:
-            
             Rt = frame.Rt
-            Rt = np.linalg.inv(Rt)
             quaternion = g2o.Quaternion(Rt[:3, :3])
             sbacam.set_rotation(quaternion)
             sbacam.set_translation(Rt[:3, 3])
@@ -42,10 +37,11 @@ class Map(object):
             v_cam = g2o.VertexCam()
             v_cam.set_id(frame.id)
             v_cam.set_estimate(sbacam)
-            v_cam.set_fixed(frame.id == 0)
+            v_cam.set_fixed(frame.id <= 1)
             opt.add_vertex(v_cam)
 
         # add points to the graph
+        pt_index_offset = 0x10000
         for point in self.points:
             v_point = g2o.VertexPointXYZ()
             v_point.set_id(point.id + 0x10000)
@@ -65,18 +61,17 @@ class Map(object):
 
         opt.initialize_optimization()
         opt.set_verbose(True)
-        opt.optimize(20)
+        opt.optimize(50)
 
         # add frame poses back into map
         for frame in self.frames:
-            Rt = opt.vertex(frame.id).estimate().to_homogeneous_matrix()
-            Rt = np.linalg.inv(Rt)
-            frame.Rt = Rt
+            est = opt.vertex(frame.id).estimate()
+            frame.Rt = est.to_homogeneous_matrix()
         
         # add points to the map
-        # for point in self.points:
-        #     pt = opt.vertex(point.id + 0x10000).estimate()
-        #     point.position = np.array([pt[0], pt[1], pt[2], 1.0])
+        for point in self.points:
+            est = opt.vertex(point.id + pt_index_offset).estimate()
+            point.position = np.array([est[0], est[1], est[2], 1.0])
 
     # ------ Viewer ------
 
@@ -135,6 +130,8 @@ class Map(object):
         if self.q is None:
             return
         Rts = [frame.Rt for frame in self.frames]
+        # frame = self.frames[0]
+        # pts = [frame.Rt @ point.position for point in self.points]
         pts = [point.position for point in self.points]
         self.q.put((Rts, pts))
 

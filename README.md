@@ -22,6 +22,9 @@ A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) u
   - [x] Track the points over multiple frames.
 - [ ] g2o based optimization.
   - [x] Build g2opy library.
+  - [x] Implement the optimizer.
+  - [x] Fix bug: Optimizer giving wrong results --> used normalized coordinates alongside unnormalized intrinsics.
+  - [ ] Improve accuracy of points.
 - [ ] point culling.
 
 ## TODO
