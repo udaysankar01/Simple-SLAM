@@ -24,8 +24,8 @@ class Map(object):
         opt.set_algorithm(solver)
 
         sbacam = g2o.SBACam()
-        sbacam.set_cam(1.0, 1.0, 0.0, 0.0, 0)   # camera parameters: fx, fy, cx, cy, baseline
-        # sbacam.set_cam()
+        # sbacam.set_cam(1.0, 1.0, 0.0, 0.0, 0)   # camera parameters: fx, fy, cx, cy, baseline
+        sbacam.set_cam(self.frames[0].K[0][0], self.frames[0].K[1][1], self.frames[0].K[0][2], self.frames[0].K[1][2], 1.0)
 
         # add frames to the graph
         for frame in self.frames:
@@ -54,7 +54,7 @@ class Map(object):
                 edge = g2o.EdgeProjectP2MC()
                 edge.set_vertex(0, v_point)
                 edge.set_vertex(1, opt.vertex(frame.id))
-                edge.set_measurement(frame.keypoints[frame.pts.index(point)])
+                edge.set_measurement(frame.keypoints_unnorm[frame.pts.index(point)])
                 edge.set_information(np.eye(2))
                 edge.set_robust_kernel(robust_kernel)
                 opt.add_edge(edge)

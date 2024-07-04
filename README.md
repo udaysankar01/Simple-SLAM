@@ -17,10 +17,10 @@ A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) u
   - [x] Build Pangolin library.
   - [x] Visualize the 3D map using Pangolin.
   - [x] Fix Bug: Camera Drift in XY Plane during Slow Movement --> caused by error in intrinsic matrix.
-- [ ] Tracking of points over multiple frames.
+- [x] Tracking of points over multiple frames.
   - [x] Implement a Point class to store the 2D-3D correspondences.
   - [x] Track the points over multiple frames.
-- [ ] g2o based optimization.
+- [x] g2o based optimization.
   - [x] Build g2opy library.
   - [x] Implement the optimizer.
   - [x] Fix bug: Optimizer giving wrong results --> used normalized coordinates alongside unnormalized intrinsics.
