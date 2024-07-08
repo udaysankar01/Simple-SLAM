@@ -40,7 +40,7 @@ class FeatureExtractor(object):
         if self.method == 'orb':
             kps, des = self.extractOrb(img)
         elif self.method == 'shitomasi':
-            kps, des = self.extractShiTomasi(img, n_points=1000)
+            kps, des = self.extractShiTomasi(img, n_points=500)
         kps = np.array([(kp.pt[0], kp.pt[1]) for kp in kps])
         return kps, des
     

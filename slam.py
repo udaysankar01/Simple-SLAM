@@ -60,7 +60,6 @@ def process_image(img):
     pts4d = triangulate(current.Rt, previous.Rt, current.keypoints[idx1], previous.keypoints[idx2])
     parallax_idx = (np.abs(pts4d[:, 3]) > 0.005)
     pts4d /= pts4d[:, 3:]
-    # pts4d = np.dot(previous.Rt, pts4d.T).T
 
     unmatched_pts = np.array([current.pts[i] is None for i in idx1]).astype(bool)
     good_pts4d = parallax_idx & (pts4d[:, 2] > 0) & unmatched_pts
@@ -69,7 +68,9 @@ def process_image(img):
     for i, p in enumerate(pts4d):
         if not good_pts4d[i]:
             continue
-        pt = Point(slam_map, p)
+        u, v = current.keypoints_unnorm[idx1[i]].astype(int)
+        pointColor = img[v, u]
+        pt = Point(slam_map, p, pointColor)
         pt.add_observation(current, idx1[i])
         pt.add_observation(previous, idx2[i])
     

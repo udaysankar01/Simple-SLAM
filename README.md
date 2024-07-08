@@ -24,6 +24,7 @@ A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) u
   - [x] Build g2opy library.
   - [x] Implement the optimizer.
   - [x] Fix bug: Optimizer giving wrong results --> used normalized coordinates alongside unnormalized intrinsics.
+  - [x] Add point color from image in 3d visualization.
   - [ ] Improve accuracy of points.
 - [ ] point culling.
 

@@ -37,7 +37,7 @@ class Map(object):
             v_cam = g2o.VertexCam()
             v_cam.set_id(frame.id)
             v_cam.set_estimate(sbacam)
-            v_cam.set_fixed(frame.id <= 1)
+            v_cam.set_fixed(frame.id <= 1) # fixing first two frames to constrain the scale
             opt.add_vertex(v_cam)
 
         # add points to the graph
@@ -61,7 +61,7 @@ class Map(object):
 
         opt.initialize_optimization()
         opt.set_verbose(True)
-        opt.optimize(50)
+        opt.optimize(10)
 
         # add frame poses back into map
         for frame in self.frames:
@@ -72,6 +72,7 @@ class Map(object):
         for point in self.points:
             est = opt.vertex(point.id + pt_index_offset).estimate()
             point.position = np.array([est[0], est[1], est[2], 1.0])
+
 
     # ------ Viewer ------
 
@@ -109,19 +110,17 @@ class Map(object):
         if self.state is None or not q.empty():
                 self.state = q.get()
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
-        gl.glClearColor(1.0, 1.0, 1.0, 1.0)
+        gl.glClearColor(0.0, 0.0, 0.0, 1.0)
         self.dcam.Activate(self.scam)
 
         # camera Rt
         gl.glPointSize(10)
         gl.glColor(0.0, 1.0, 0.0)
-        # pangolin.DrawCameras(self.state[0], w=1.0, h_ratio=0.5625, z_ratio=1)
         pangolin.DrawCameras(self.state[0])
         
         # point position
-        gl.glPointSize(2)
-        gl.glColor(1.0, 0.0, 0.0)
-        pangolin.DrawPoints(np.array(self.state[1]))   
+        gl.glPointSize(5)
+        pangolin.DrawPoints(np.array(self.state[1]), self.state[2])   
 
         pangolin.FinishFrame()
 
@@ -129,20 +128,20 @@ class Map(object):
     def display(self):
         if self.q is None:
             return
-        Rts = [frame.Rt for frame in self.frames]
-        # frame = self.frames[0]
-        # pts = [frame.Rt @ point.position for point in self.points]
-        pts = [point.position for point in self.points]
-        self.q.put((Rts, pts))
+        Rts = np.array([frame.Rt for frame in self.frames])
+        pts = np.array([point.position for point in self.points])
+        colors = np.array([point.color for point in self.points])
+        colors = colors / 255.0
+        self.q.put((Rts, pts, colors))
 
 
 class Point(object):
     
-    def __init__(self, slam_map, position):
+    def __init__(self, slam_map, position, pointColor):
         self.frames = []
         self.position = position
         self.idxs = []
-        
+        self.color = pointColor.copy()
         self.id = len(slam_map.points)
         slam_map.points.append(self)
 
