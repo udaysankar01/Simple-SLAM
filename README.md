@@ -2,6 +2,10 @@
 
 A simple implementation of sparse SLAM (Simultaneous Localization and Mapping) using Python.
 
+
+![image](doc/slam.png)
+
+
 ## Tasks
 
 - [x] Feature detection using ORB feature detection or Shi-Tomasi corner detection.
@@ -74,6 +78,9 @@ https://github.com/uoip/g2opy
 The 3D visualization is done using Pangolin. The Pangolin library is a lightweight portable rapid development library for managing OpenGL display / interaction and abstracting video input. Pangolin library is used alongside OpenGL library to visualize the 3D map. To install Pangolin, use this repo:
 
 https://github.com/uoip/pangolin
+
+
+
 
 To install the remaining python dependencies, run:
 
